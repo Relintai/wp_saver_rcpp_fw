@@ -1,0 +1,12 @@
+
+sites=test1,test2
+save_original_data=true
+original_data_backend=database
+
+voxday.url=https://test1.net/
+voxday.directory=test1
+voxday.original_data_table=test1
+
+voxday.url=https://test2.net/
+voxday.directory=test2
+voxday.original_data_table=test2
