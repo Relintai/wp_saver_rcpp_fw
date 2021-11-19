@@ -8,21 +8,6 @@
 #undef LOG_TRACE
 #undef LOG_WARN
 
-#include "modules/list_page/list_page.h"
-#include "modules/message_page/message_page.h"
-#include "modules/paged_article/paged_article.h"
-#include "modules/paged_list/paged_list.h"
-
-class AdminPanel;
-class RBACController;
-class RBACModel;
-
-#define ENSURE_LOGIN(request)                  \
-	if (!is_logged_in(request)) {              \
-		request->send_redirect("/user/login"); \
-		return;                                \
-	}
-
 class CCMSApplication : public DWebApplication {
 public:
 	enum MenuEntries {
@@ -63,10 +48,6 @@ public:
 
 	CCMSApplication();
 	~CCMSApplication();
-
-	AdminPanel *_admin_panel; 
-	RBACController *_rbac_controller;
-	RBACModel *_rbac_model;
 
 	static std::string menu_head;
 	static std::string footer;
