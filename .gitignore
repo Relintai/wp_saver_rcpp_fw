@@ -10,6 +10,8 @@ game/.prop_tool_temp/**
 .sconsign.dblite
 .DS_Store
 
+www/**
+data/**
 export/**
 release/**
 
