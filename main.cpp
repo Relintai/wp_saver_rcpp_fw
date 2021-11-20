@@ -13,7 +13,7 @@
 
 #include "modules/drogon/web_application.h"
 
-//Backends
+// Backends
 #include "backends/hash_hashlib/setup.h"
 
 #include "core/database/database_manager.h"
@@ -30,11 +30,13 @@
 
 #include "core/settings.h"
 
-#include "modules/drogon/trantor/net/EventLoop.h"
 #include "modules/drogon/drogon/lib/inc/drogon/HttpClient.h"
 #include "modules/drogon/drogon/lib/inc/http/HttpRequest.h"
+#include "modules/drogon/trantor/net/EventLoop.h"
 //#include "modules/drogon/trantor/net/Resolver.h"
 //#include "modules/drogon/trantor/net/TcpClient.h"
+
+#include <string>
 
 void initialize_backends() {
 	initialize_database_backends();
@@ -95,6 +97,7 @@ String get_last_url(Database *db) {
 void save_page(Database *db, const String &url, const String &data) {
 }
 
+String *ss = nullptr;
 void download_posts(Database *db, const String &site) {
 	setup_database(db);
 
@@ -102,83 +105,56 @@ void download_posts(Database *db, const String &site) {
 	String port = Settings::get_singleton()->get_value(site + ".port");
 	String first_url = Settings::get_singleton()->get_value(site + ".first_url");
 	String last_url = get_last_url(db);
+	String full_site_url = port + "://" + url;
 
 	if (last_url == "") {
 		last_url = first_url;
 	}
 
 	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
+	RLOG_MSG("Sending query to: " + full_site_url + last_url + "\n");
 
 	trantor::EventLoop *loop;
 	std::thread t([&loop]() { loop = new trantor::EventLoop(); loop->loop(); delete loop; loop = nullptr; });
 
 	while (loop == nullptr) {
-		//todo sleep
+		// todo sleep
 	}
 
-	HttpClientPtr http_client = drogon::HttpClient::newHttpClient("http://127.0.0.1:8080/", loop);
+	HttpClientPtr http_client = drogon::HttpClient::newHttpClient("http://127.0.0.1/", loop, false, false);
+	http_client->setUserAgent("Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0");
 
 	HttpRequestPtr request = drogon::HttpRequest::newHttpRequest();
 	request->setMethod(drogon::HttpMethod::Get);
-	request->setPath(last_url);
+	request->setPath("/");
+	// request->setCustomContentTypeString("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\n");
 
-	http_client->sendRequest(request, [](ReqResult res, const HttpResponsePtr &resptr){ RLOG_ERR("test\n");  });
+	bool done = false;
+	http_client->sendRequest(request, [&done](ReqResult res, const HttpResponsePtr &resptr) {
+		if (res != ReqResult::Ok) {
+			RLOG_ERR("sendRequest: res != ReqResult::Ok!\n");
+			done = true;
+			return;
+		}
 
-	while (true) {
-		//todo remove
+		RLOG_MSG("Got response. Saving.\n");
+
+		ss = new String(resptr->getBody().data());
+
+		done = true;
+	});
+
+	while (!done) {
+		// todo remove
 	}
 
 	loop->quit();
-
 	t.join();
+
+	if (ss) {
+		delete ss;
+	}
 }
-
-
-/*
-trantor::InetAddress site_address;
-
-void download_posts(Database *db, const String &site) {
-	setup_database(db);
-
-	String url = Settings::get_singleton()->get_value(site + ".url");
-	String port = Settings::get_singleton()->get_value(site + ".port");
-	String first_url = Settings::get_singleton()->get_value(site + ".first_url");
-	String last_url = get_last_url(db);
-
-	if (last_url == "") {
-		last_url = first_url;
-	}
-
-	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
-
-	trantor::EventLoop *loop;
-	std::thread t([&loop]() { loop = new trantor::EventLoop(); loop->loop(); delete loop; loop = nullptr; });
-
-	std::shared_ptr<trantor::Resolver> resolver = trantor::Resolver::newResolver(loop);
-
-	bool resolved = false;
-	resolver->resolve(url, [&resolved](const trantor::InetAddress& addr) { site_address = addr; resolved = true; });
-
-	while (!resolved) {
-		//todo sleep
-	}
-
-	if (port == "http") {
-		site_address = trantor::InetAddress(site_address.toIp(), 80);
-	} else if (port == "https") {
-		site_address = trantor::InetAddress(site_address.toIp(), 443);
-	} else {
-		site_address = trantor::InetAddress(site_address.toIp(), port.to_uint());
-	}
-
-	RLOG_MSG("Resolved ip:");
-	RLOG_MSG(site_address.toIpPort().c_str());
-
-	loop->quit();
-
-	t.join();
-}
-*/
 
 int main(int argc, char **argv, char **envp) {
 	PlatformInitializer::allocate_all();
