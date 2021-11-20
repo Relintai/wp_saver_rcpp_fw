@@ -1,11 +1,11 @@
 #include <string.h>
+#include <chrono>
 #include <iostream>
 #include <string>
-#include <chrono>
 
-#include "core/math/math.h"
 #include "core/file_cache.h"
 #include "core/http/web_application.h"
+#include "core/math/math.h"
 
 #include "app/ccms_application.h"
 
@@ -100,6 +100,13 @@ String get_last_url(Database *db) {
 }
 
 void save_page(Database *db, const String &url, const String &full_data, const String &extracted_data) {
+	Ref<QueryBuilder> qb = db->get_query_builder();
+
+	qb->begin_transaction();
+	qb->insert("data", "url,full_data,extracted_data")->values()->val(url)->val(full_data)->val(extracted_data)->cvalues()->end_command();
+	qb->update("settings")->set()->setp("last_url", url)->cset()->end_command();
+	qb->commit();
+	qb->run();
 }
 
 String *ss = nullptr;
@@ -140,19 +147,33 @@ void download_posts(Database *db, const String &site) {
 	String port = Settings::get_singleton()->get_value(site + ".port");
 	String first_url = Settings::get_singleton()->get_value(site + ".first_url");
 	String last_url = get_last_url(db);
+
+	// String url = "127.0.0.1";
+	// String port = "http";
+	// String first_url = "/";
+	// String last_url = get_last_url(db);
+
 	String full_site_url = port + "://" + url;
+	String full_site_url_repl = full_site_url;
+
+	if (full_site_url_repl.ends_with("/")) {
+		full_site_url_repl.pop_back();
+	}
+
 	int wait_seconds_min = Settings::get_singleton()->get_value_int(site + ".wait_seconds_min", 10);
 	int wait_seconds_max = Settings::get_singleton()->get_value_int(site + ".wait_seconds_max", 20);
 
+	bool should_skip = true;
+
 	if (last_url == "") {
+		should_skip = false;
+		
 		last_url = first_url;
 	}
 
-	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
+	
 
-	// test
-	full_site_url = "http://127.0.0.1/";
-	last_url = "/";
+	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
 
 	bool done = false;
 
@@ -194,7 +215,12 @@ void download_posts(Database *db, const String &site) {
 				RLOG_WARN("Couldn't extract next_div!\n");
 			}
 
-			save_page(db, last_url, *ss, extracted_data);
+			if (should_skip) {
+				should_skip = false;
+				RLOG_MSG("Continuing from last session, this page is already saved, skipping.\n");
+			} else {
+				save_page(db, last_url, *ss, extracted_data);
+			}
 
 			if (next_link == "") {
 				done = true;
@@ -203,12 +229,13 @@ void download_posts(Database *db, const String &site) {
 
 				RLOG_MSG("Waiting for " + String::num(wait_seconds) + " seconds!\n");
 				std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(wait_seconds * 1000));
+
+				last_url = next_link;
+
+				if (last_url.starts_with(full_site_url_repl)) {
+					last_url.replace(full_site_url_repl, "", 1);
+				}
 			}
-
-			// remove!
-			next_link.print();
-			done = true;
-
 		} else {
 			done = true;
 		}
