@@ -112,13 +112,17 @@ void download_posts(Database *db, const String &site) {
 	trantor::EventLoop *loop;
 	std::thread t([&loop]() { loop = new trantor::EventLoop(); loop->loop(); delete loop; loop = nullptr; });
 
+	while (loop == nullptr) {
+		//todo sleep
+	}
+
 	HttpClientPtr http_client = drogon::HttpClient::newHttpClient("http://127.0.0.1:8080/", loop);
 
 	HttpRequestPtr request = drogon::HttpRequest::newHttpRequest();
 	request->setMethod(drogon::HttpMethod::Get);
 	request->setPath(last_url);
 
-	http_client->sendRequest(request);
+	http_client->sendRequest(request, [](ReqResult res, const HttpResponsePtr &resptr){ RLOG_ERR("test\n");  });
 
 	while (true) {
 		//todo remove
