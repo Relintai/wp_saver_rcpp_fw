@@ -1,7 +1,9 @@
 #include <string.h>
 #include <iostream>
 #include <string>
+#include <chrono>
 
+#include "core/math/math.h"
 #include "core/file_cache.h"
 #include "core/http/web_application.h"
 
@@ -43,6 +45,8 @@ void initialize_backends() {
 	backend_hash_hashlib_install_providers();
 }
 
+trantor::EventLoop *main_event_loop;
+
 void setup_database(Database *db) {
 	Ref<QueryBuilder> qb = db->get_query_builder();
 
@@ -69,7 +73,8 @@ void setup_database(Database *db) {
 	tb->create_table("data");
 	tb->integer("id")->auto_increment()->next_row();
 	tb->varchar("url", 1000)->not_null()->next_row();
-	tb->text("data")->not_null()->next_row();
+	tb->text("full_data")->not_null()->next_row();
+	tb->text("extracted_data")->not_null()->next_row();
 	tb->primary_key("id");
 	tb->ccreate_table();
 
@@ -94,39 +99,18 @@ String get_last_url(Database *db) {
 	return String(res->get_cell(0));
 }
 
-void save_page(Database *db, const String &url, const String &data) {
+void save_page(Database *db, const String &url, const String &full_data, const String &extracted_data) {
 }
 
 String *ss = nullptr;
-void download_posts(Database *db, const String &site) {
-	setup_database(db);
 
-	String url = Settings::get_singleton()->get_value(site + ".url");
-	String port = Settings::get_singleton()->get_value(site + ".port");
-	String first_url = Settings::get_singleton()->get_value(site + ".first_url");
-	String last_url = get_last_url(db);
-	String full_site_url = port + "://" + url;
-
-	if (last_url == "") {
-		last_url = first_url;
-	}
-
-	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
-	RLOG_MSG("Sending query to: " + full_site_url + last_url + "\n");
-
-	trantor::EventLoop *loop;
-	std::thread t([&loop]() { loop = new trantor::EventLoop(); loop->loop(); delete loop; loop = nullptr; });
-
-	while (loop == nullptr) {
-		// todo sleep
-	}
-
-	HttpClientPtr http_client = drogon::HttpClient::newHttpClient("http://127.0.0.1/", loop, false, false);
+void query_page(trantor::EventLoop *loop, const String &url, const String &path) {
+	HttpClientPtr http_client = drogon::HttpClient::newHttpClient(url, loop, false, false);
 	http_client->setUserAgent("Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0");
 
 	HttpRequestPtr request = drogon::HttpRequest::newHttpRequest();
 	request->setMethod(drogon::HttpMethod::Get);
-	request->setPath("/");
+	request->setPath(path);
 	// request->setCustomContentTypeString("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\nAccept-Language: en-US,en;q=0.5\n");
 
 	bool done = false;
@@ -147,12 +131,90 @@ void download_posts(Database *db, const String &site) {
 	while (!done) {
 		// todo remove
 	}
+}
 
-	loop->quit();
-	t.join();
+void download_posts(Database *db, const String &site) {
+	setup_database(db);
 
-	if (ss) {
+	String url = Settings::get_singleton()->get_value(site + ".url");
+	String port = Settings::get_singleton()->get_value(site + ".port");
+	String first_url = Settings::get_singleton()->get_value(site + ".first_url");
+	String last_url = get_last_url(db);
+	String full_site_url = port + "://" + url;
+	int wait_seconds_min = Settings::get_singleton()->get_value_int(site + ".wait_seconds_min", 10);
+	int wait_seconds_max = Settings::get_singleton()->get_value_int(site + ".wait_seconds_max", 20);
+
+	if (last_url == "") {
+		last_url = first_url;
+	}
+
+	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
+
+	// test
+	full_site_url = "http://127.0.0.1/";
+	last_url = "/";
+
+	bool done = false;
+
+	while (!done) {
+		RLOG_MSG("Sending query to: " + full_site_url + last_url + "\n");
+
+		query_page(main_event_loop, full_site_url, last_url);
+
+		if (ss) {
+			HTMLParser p;
+			p.parse(*ss);
+
+			HTMLParserTag *article_tag = p.root->get_first("article");
+
+			String extracted_data = "";
+			String next_link;
+
+			if (article_tag) {
+				extracted_data = article_tag->to_string();
+			} else {
+				RLOG_WARN("Couldn't extract data!\n");
+			}
+
+			HTMLParserTag *next_div = p.root->get_first("div", "class", "nav-next");
+
+			if (next_div) {
+				if (next_div->tags.size() == 1) {
+					HTMLParserTag *link = next_div->tags[0];
+
+					next_link = link->get_attribute_value("href");
+
+					if (next_link == "") {
+						RLOG_WARN("Couldn't extract link!\n");
+					}
+				} else {
+					RLOG_WARN("Couldn't extract next_div! (tags.size() != 1)!\n");
+				}
+			} else {
+				RLOG_WARN("Couldn't extract next_div!\n");
+			}
+
+			save_page(db, last_url, *ss, extracted_data);
+
+			if (next_link == "") {
+				done = true;
+			} else {
+				int wait_seconds = Math::rand(wait_seconds_min, wait_seconds_max);
+
+				RLOG_MSG("Waiting for " + String::num(wait_seconds) + " seconds!\n");
+				std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(wait_seconds * 1000));
+			}
+
+			// remove!
+			next_link.print();
+			done = true;
+
+		} else {
+			done = true;
+		}
+
 		delete ss;
+		ss = nullptr;
 	}
 }
 
@@ -169,6 +231,12 @@ int main(int argc, char **argv, char **envp) {
 	bool download = Platform::get_singleton()->arg_parser.has_arg("-d");
 
 	if (download) {
+		std::thread t([]() { main_event_loop = new trantor::EventLoop(); main_event_loop->loop(); delete main_event_loop; main_event_loop = nullptr; });
+
+		while (main_event_loop == nullptr) {
+			// todo sleep
+		}
+
 		DatabaseManager *dbm = new DatabaseManager();
 
 		bool save_original_data = settings->get_value_bool("save_original_data");
@@ -189,6 +257,9 @@ int main(int argc, char **argv, char **envp) {
 		}
 
 		delete dbm;
+
+		main_event_loop->quit();
+		t.join();
 	} else {
 		/*
 		FileCache *file_cache = new FileCache(true);
