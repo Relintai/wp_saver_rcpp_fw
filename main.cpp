@@ -1,44 +1,19 @@
 #include <string.h>
-#include <chrono>
-#include <iostream>
-#include <string>
-
-#include "core/file_cache.h"
-#include "core/http/web_application.h"
-#include "core/math/math.h"
-
-#include "app/ccms_application.h"
-
-#include "database/db_init.h"
 
 #include "core/settings.h"
+#include "core/os/platform.h"
+#include "core/file_cache.h"
+#include "core/math/math.h"
 
-#include "modules/drogon/web_application.h"
+#include "database/db_init.h"
 
 // Backends
 #include "backends/hash_hashlib/setup.h"
 
 #include "core/database/database_manager.h"
-#include "core/database/query_builder.h"
-#include "core/database/query_result.h"
-#include "core/database/table_builder.h"
 #include "platform/platform_initializer.h"
 
-#include "core/os/platform.h"
-
-#include "modules/rbac/rbac_rank.h"
-
-#include "core/html/html_parser.h"
-
 #include "core/settings.h"
-
-#include "modules/drogon/drogon/lib/inc/drogon/HttpClient.h"
-#include "modules/drogon/drogon/lib/inc/http/HttpRequest.h"
-#include "modules/drogon/trantor/net/EventLoop.h"
-//#include "modules/drogon/trantor/net/Resolver.h"
-//#include "modules/drogon/trantor/net/TcpClient.h"
-
-#include <string>
 
 #include "app/wp_downloader.h"
 
