@@ -14,13 +14,38 @@
 #include "core/http/http_session.h"
 #include "core/http/session_manager.h"
 
-void WPApplication::index(Object *instance, Request *request) {
+void WPApplication::index_fun(Object *instance, Request *request) {
+	WPApplication *app = Object::cast_to<WPApplication>(instance);
 
-	request->body += "test";
+	app->index(request);
+}
+
+void WPApplication::blog_fun(Object *instance, Request *request) {
+	WPApplication *app = Object::cast_to<WPApplication>(instance);
+
+	app->blog(request);
+}
+
+void WPApplication::index(Request *request) {
+	HTMLBuilder b;
+
+	b.div("content");
+
+	b.div("content_head")->f()->w("Saved blogs:")->cdiv();
+
+	for (int i = 0; i < _blog_data.size(); ++i) {
+		BlogData &bd = _blog_data[i];
+
+		b.div("content_row")->f()->fa("/blog/" + bd.name + "/", bd.name, "blog_link")->cdiv();
+	}
+
+	b.cdiv();
+
+	request->body += b.result;
 	request->compile_and_send_body();
 }
 
-void WPApplication::blog(Object *instance, Request *request) {
+void WPApplication::blog(Request *request) {
 	request->body += "test blog";
 	request->compile_and_send_body();
 }
@@ -43,8 +68,6 @@ void WPApplication::routing_middleware(Object *instance, Request *request) {
 
 		request->handler_instance = app->index_func;
 	} else {
-		
-
 		const String main_route = request->get_current_path_segment();
 
 		request->push_path();
@@ -67,8 +90,8 @@ void WPApplication::routing_middleware(Object *instance, Request *request) {
 void WPApplication::setup_routes() {
 	DWebApplication::setup_routes();
 
-	index_func = HandlerInstance(index, this);
-	blog_func = HandlerInstance(blog, this);
+	index_func = HandlerInstance(index_fun, this);
+	blog_func = HandlerInstance(blog_fun, this);
 }
 
 void WPApplication::setup_middleware() {
@@ -76,6 +99,15 @@ void WPApplication::setup_middleware() {
 }
 
 void WPApplication::migrate() {
+}
+
+void WPApplication::add_blog(const String &name, Database *db) {
+	BlogData bd;
+
+	bd.name = name;
+	bd.db = db;
+
+	_blog_data.push_back(bd);
 }
 
 void WPApplication::compile_menu() {
@@ -108,4 +140,3 @@ WPApplication::WPApplication() :
 
 WPApplication::~WPApplication() {
 }
-

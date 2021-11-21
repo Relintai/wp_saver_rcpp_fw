@@ -1,9 +1,9 @@
 #include <string.h>
 
-#include "core/settings.h"
-#include "core/os/platform.h"
 #include "core/file_cache.h"
 #include "core/math/math.h"
+#include "core/os/platform.h"
+#include "core/settings.h"
 
 #include "database/db_init.h"
 
@@ -15,8 +15,8 @@
 
 #include "core/settings.h"
 
-#include "app/wp_downloader.h"
 #include "app/wp_application.h"
+#include "app/wp_downloader.h"
 
 void initialize_backends() {
 	initialize_database_backends();
@@ -33,11 +33,12 @@ int main(int argc, char **argv, char **envp) {
 	Settings *settings = new Settings(true);
 	settings->parse_ini_file("settings.ini");
 
+	DatabaseManager *dbm = new DatabaseManager();
+
 	bool download = Platform::get_singleton()->arg_parser.has_arg("-d");
 
 	if (download) {
 		Vector<Ref<WPDownloader> > downloaders;
-		DatabaseManager *dbm = new DatabaseManager();
 
 		bool save_original_data = settings->get_value_bool("save_original_data");
 
@@ -57,14 +58,13 @@ int main(int argc, char **argv, char **envp) {
 
 				d->setup(s, db);
 
-				//todo
-				//downloaders.push_back(d);
+				// todo
+				// downloaders.push_back(d);
 
 				d->run();
 			}
 		}
 
-		delete dbm;
 	} else {
 		FileCache *file_cache = new FileCache(true);
 		file_cache->wwwroot = "./www";
@@ -75,6 +75,20 @@ int main(int argc, char **argv, char **envp) {
 		app->setup_routes();
 		app->setup_middleware();
 		app->add_listener("127.0.0.1", 8080);
+
+		String sites = settings->get_value("sites");
+
+		int sc = sites.get_slice_count(',');
+		for (int i = 0; i < sc; ++i) {
+			String s = sites.get_slice(',', i);
+
+			uint32_t index = dbm->create_database("sqlite");
+			Database *db = dbm->databases[index];
+			db->connect(database_folder + s + ".sqlite");
+
+			app->add_blog(s, db);
+		}
+
 		LOG_INFO << "Server running on 127.0.0.1:8080";
 		printf("Initialized!\n");
 		app->run();
@@ -83,6 +97,7 @@ int main(int argc, char **argv, char **envp) {
 		delete file_cache;
 	}
 
+	delete dbm;
 	delete settings;
 
 	PlatformInitializer::free_all();
