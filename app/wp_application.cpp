@@ -36,35 +36,32 @@ void WPApplication::routing_middleware(Object *instance, Request *request) {
 		return;
 	}
 
-	HandlerInstance handler_data;
-	handler_data.instance = instance;
-
 	if (request->get_path_segment_count() == 0) {
-		handler_data.handler_func = index;
+		request->handler_instance = app->index_func;
 	} else {
 		const std::string main_route = request->get_current_path_segment();
 
 		request->push_path();
 
 		if (main_route == "blog") {
-			handler_data.handler_func = blog;
+			request->handler_instance = app->blog_func;
 		}
 	}
 
-	if (!handler_data.handler_func) {
+	if (!request->handler_instance.handler_func) {
 		app->send_error(404, request);
 
 		return;
 	}
 
-	request->handler_instance = handler_data;
 	request->next_stage();
 }
 
 void WPApplication::setup_routes() {
 	DWebApplication::setup_routes();
 
-	index_func = HandlerInstance(index);
+	index_func = HandlerInstance(index, this);
+	blog_func = HandlerInstance(blog, this);
 }
 
 void WPApplication::setup_middleware() {
@@ -78,17 +75,14 @@ void WPApplication::compile_menu() {
 	HTMLBuilder bh;
 
 	bh.meta()->charset_utf_8();
-	bh.meta()->name("description")->content("RPG browsergame");
-	bh.meta()->name("keywords")->content("RPG,browsergame,Mourne,game,play");
 	bh.title();
-	bh.w("Mourne");
+	bh.w("WPSaver");
 	bh.ctitle();
 
-	bh.link()->rel_stylesheet()->href("/css/base.css");
-	bh.link()->rel_stylesheet()->href("/css/menu.css");
+	bh.link()->rel_stylesheet()->href("site.css");
 	bh.write_tag();
 
-	menu_head = bh.result;
+	header = bh.result;
 
 	HTMLBuilder bf;
 
@@ -108,5 +102,3 @@ WPApplication::WPApplication() :
 WPApplication::~WPApplication() {
 }
 
-std::string WPApplication::menu_head = "";
-std::string WPApplication::footer = "";

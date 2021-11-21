@@ -4,6 +4,7 @@
 //#include "core/http/web_application.h"
 #include "core/object.h"
 #include "modules/drogon/web_application.h"
+#include "core/string.h"
 
 #undef LOG_TRACE
 #undef LOG_WARN
@@ -27,8 +28,10 @@ public:
 	WPApplication();
 	~WPApplication();
 
-	static std::string menu_head;
-	static std::string footer;
+	HandlerInstance blog_func;
+
+	String header;
+	String footer;
 };
 
 #endif
