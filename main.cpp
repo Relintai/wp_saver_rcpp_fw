@@ -123,12 +123,12 @@ void query_page(trantor::EventLoop *loop, const String &url, const String &path)
 	bool done = false;
 	http_client->sendRequest(request, [&done](ReqResult res, const HttpResponsePtr &resptr) {
 		if (res != ReqResult::Ok) {
-			RLOG_ERR("sendRequest: res != ReqResult::Ok!\n");
+			RLOG_ERR("sendRequest: res != ReqResult::Ok!");
 			done = true;
 			return;
 		}
 
-		RLOG_MSG("Got response. Saving.\n");
+		RLOG_MSG("Got response. Saving.");
 
 		ss = new String(resptr->getBody().data());
 
@@ -176,7 +176,7 @@ void download_posts(Database *db, const String &site) {
 	bool done = false;
 
 	while (!done) {
-		RLOG_MSG("Sending query to: " + full_site_url + last_url + "\n");
+		RLOG_MSG("Sending query to: " + full_site_url + last_url);
 
 		query_page(main_event_loop, full_site_url, last_url);
 
@@ -192,7 +192,7 @@ void download_posts(Database *db, const String &site) {
 			if (article_tag) {
 				extracted_data = article_tag->to_string();
 			} else {
-				RLOG_WARN("Couldn't extract data!\n");
+				RLOG_WARN("Couldn't extract data!");
 			}
 
 			HTMLParserTag *n_link_tag = p.root->get_first("a", "rel", "next");
@@ -201,16 +201,16 @@ void download_posts(Database *db, const String &site) {
 				next_link = n_link_tag->get_attribute_value("href");
 
 				if (next_link == "") {
-					RLOG_WARN("Couldn't extract link!\n");
+					RLOG_WARN("Couldn't extract link!");
 				}
 			} else {
 				next_link = "";
-				RLOG_WARN("Couldn't extract link tag!\n");
+				RLOG_WARN("Couldn't extract link tag!");
 			}
 
 			if (should_skip) {
 				should_skip = false;
-				RLOG_MSG("Continuing from last session, this page is already saved, skipping.\n");
+				RLOG_MSG("Continuing from last session, this page is already saved, skipping.");
 			} else {
 				save_page(db, last_url, *ss, extracted_data);
 			}
@@ -220,7 +220,7 @@ void download_posts(Database *db, const String &site) {
 			} else {
 				int wait_seconds = Math::rand(wait_seconds_min, wait_seconds_max);
 
-				RLOG_MSG("Waiting for " + String::num(wait_seconds) + " seconds!\n");
+				RLOG_MSG("Waiting for " + String::num(wait_seconds) + " seconds!");
 				std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(wait_seconds * 1000));
 
 				last_url = next_link;
