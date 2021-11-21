@@ -83,7 +83,22 @@ void WPApplication::blog(Request *request) {
 
 		page = request->get_current_path_segment().to_int();
 	} else if (action_segment == "post") {
-		request->body += "test blog post";
+		request->push_path();
+		
+		int post_id = request->get_current_path_segment().to_int();
+
+		PostData *p = get_post(db, post_id);
+
+		if (!p) {
+			request->send_error(404);
+			return;
+		}
+
+		b.div("content");
+		b.div("blog_content")->f()->w(p->data)->cdiv();
+		b.cdiv();
+
+		request->body += b.result;
 		request->compile_and_send_body();
 		return;
 	} else {
@@ -109,8 +124,8 @@ void WPApplication::blog(Request *request) {
 			PostData *p = posts[i];
 
 			b.div("blog_content_row");
-			b.div("blog_entry_link")->f()->fa(request->get_url_root_current() + "post/" + String::num(p->id), "Open")->cdiv();
-			b.w(p->data);
+			b.div("blog_entry_link")->f()->fa("/blog/" + blog + "/post/" + String::num(p->id), "Open")->cdiv();
+			b.div("blog_content")->f()->w(p->data)->cdiv();
 			b.cdiv();
 		}
 	} else {
@@ -157,6 +172,25 @@ int WPApplication::get_post_count(Database *db) {
 	}
 
 	return res->get_cell_int(0);
+}
+
+WPApplication::PostData *WPApplication::get_post(Database *db, const int id) {
+	Ref<QueryBuilder> qb = db->get_query_builder();
+
+	qb->select("id,url,extracted_data")->from("data")->where()->wp("id", id)->end_command();
+	Ref<QueryResult> res = qb->run();
+
+	if (!res->next_row()) {
+		return nullptr;
+	}
+
+	PostData *p = new PostData();
+
+	p->id = res->get_cell_int(0);
+	p->url = res->get_cell(1);
+	p->data = res->get_cell(2);
+
+	return p;
 }
 
 void WPApplication::routing_middleware(Object *instance, Request *request) {

@@ -25,6 +25,7 @@ public:
 	};
 
 	Vector<PostData *> get_posts(Database *db, const int page, const int num_per_page = 5);
+	PostData * get_post(Database *db, const int id);
 	int get_post_count(Database *db);
 
 	static void routing_middleware(Object *instance, Request *request);
