@@ -6,8 +6,7 @@
 #include "core/string.h"
 #include "modules/drogon/web_application.h"
 
-#undef LOG_TRACE
-#undef LOG_WARN
+class Database;
 
 class WPApplication : public DWebApplication {
 	RCPP_OBJECT(WPApplication, DWebApplication);
@@ -18,6 +17,15 @@ public:
 
 	void index(Request *request);
 	void blog(Request *request);
+
+	struct PostData {
+		int id;
+		String url;
+		String data;
+	};
+
+	Vector<PostData *> get_posts(Database *db, const int page, const int num_per_page = 5);
+	int get_post_count(Database *db);
 
 	static void routing_middleware(Object *instance, Request *request);
 
