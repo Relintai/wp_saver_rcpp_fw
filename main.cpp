@@ -16,6 +16,7 @@
 #include "core/settings.h"
 
 #include "app/wp_downloader.h"
+#include "app/wp_application.h"
 
 void initialize_backends() {
 	initialize_database_backends();
@@ -65,12 +66,11 @@ int main(int argc, char **argv, char **envp) {
 
 		delete dbm;
 	} else {
-		/*
 		FileCache *file_cache = new FileCache(true);
 		file_cache->wwwroot = "./www";
 		file_cache->wwwroot_refresh_cache();
 
-		DWebApplication *app = new DWebApplication();
+		WPApplication *app = new WPApplication();
 		app->load_settings();
 		app->setup_routes();
 		app->setup_middleware();
@@ -81,7 +81,6 @@ int main(int argc, char **argv, char **envp) {
 		delete app;
 
 		delete file_cache;
-		*/
 	}
 
 	delete settings;

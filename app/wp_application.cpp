@@ -21,12 +21,12 @@ void WPApplication::index(Object *instance, Request *request) {
 }
 
 void WPApplication::blog(Object *instance, Request *request) {
-	request->body += "test";
+	request->body += "test blog";
 	request->compile_and_send_body();
 }
 
 void WPApplication::routing_middleware(Object *instance, Request *request) {
-	std::string path = request->get_path_full();
+	String path = request->get_path_full();
 
 	WPApplication *app = Object::cast_to<WPApplication>(instance);
 
@@ -36,19 +36,26 @@ void WPApplication::routing_middleware(Object *instance, Request *request) {
 		return;
 	}
 
+	bool handled = false;
+
 	if (request->get_path_segment_count() == 0) {
+		handled = true;
+
 		request->handler_instance = app->index_func;
 	} else {
-		const std::string main_route = request->get_current_path_segment();
+		
+
+		const String main_route = request->get_current_path_segment();
 
 		request->push_path();
 
 		if (main_route == "blog") {
+			handled = true;
 			request->handler_instance = app->blog_func;
 		}
 	}
 
-	if (!request->handler_instance.handler_func) {
+	if (!handled) {
 		app->send_error(404, request);
 
 		return;
