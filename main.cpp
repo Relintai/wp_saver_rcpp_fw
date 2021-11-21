@@ -167,11 +167,9 @@ void download_posts(Database *db, const String &site) {
 
 	if (last_url == "") {
 		should_skip = false;
-		
+
 		last_url = first_url;
 	}
-
-	
 
 	RLOG_MSG("Post downloading started for " + site + " | last url: " + last_url);
 
@@ -197,22 +195,17 @@ void download_posts(Database *db, const String &site) {
 				RLOG_WARN("Couldn't extract data!\n");
 			}
 
-			HTMLParserTag *next_div = p.root->get_first("div", "class", "nav-next");
+			HTMLParserTag *n_link_tag = p.root->get_first("a", "rel", "next");
 
-			if (next_div) {
-				if (next_div->tags.size() == 1) {
-					HTMLParserTag *link = next_div->tags[0];
+			if (n_link_tag) {
+				next_link = n_link_tag->get_attribute_value("href");
 
-					next_link = link->get_attribute_value("href");
-
-					if (next_link == "") {
-						RLOG_WARN("Couldn't extract link!\n");
-					}
-				} else {
-					RLOG_WARN("Couldn't extract next_div! (tags.size() != 1)!\n");
+				if (next_link == "") {
+					RLOG_WARN("Couldn't extract link!\n");
 				}
 			} else {
-				RLOG_WARN("Couldn't extract next_div!\n");
+				next_link = "";
+				RLOG_WARN("Couldn't extract link tag!\n");
 			}
 
 			if (should_skip) {
