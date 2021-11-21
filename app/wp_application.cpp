@@ -31,6 +31,8 @@ void WPApplication::blog_fun(Object *instance, Request *request) {
 }
 
 void WPApplication::index(Request *request) {
+	request->head += header;
+
 	HTMLBuilder b;
 
 	b.div("content");
@@ -46,10 +48,13 @@ void WPApplication::index(Request *request) {
 	b.cdiv();
 
 	request->body += b.result;
+	request->body += footer;
 	request->compile_and_send_body();
 }
 
 void WPApplication::blog(Request *request) {
+	request->head += header;
+
 	String blog = request->get_current_path_segment();
 
 	Database *db = nullptr;
@@ -84,7 +89,7 @@ void WPApplication::blog(Request *request) {
 		page = request->get_current_path_segment().to_int();
 	} else if (action_segment == "post") {
 		request->push_path();
-		
+
 		int post_id = request->get_current_path_segment().to_int();
 
 		PostData *p = get_post(db, post_id);
@@ -99,6 +104,7 @@ void WPApplication::blog(Request *request) {
 		b.cdiv();
 
 		request->body += b.result;
+		request->body += footer;
 		request->compile_and_send_body();
 		return;
 	} else {
@@ -137,6 +143,7 @@ void WPApplication::blog(Request *request) {
 	b.cdiv();
 
 	request->body += b.result;
+	request->body += footer;
 	request->compile_and_send_body();
 }
 
@@ -261,7 +268,7 @@ void WPApplication::compile_menu() {
 	bh.w("WPSaver");
 	bh.ctitle();
 
-	bh.link()->rel_stylesheet()->href("site.css");
+	bh.link()->rel_stylesheet()->href("/site.css");
 	bh.write_tag();
 
 	header = bh.result;
