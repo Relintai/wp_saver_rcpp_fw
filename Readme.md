@@ -1,10 +1,8 @@
-# CrystalCMS
+# WP Saver RCPP FW
 
-An old CMS of mine that was originally written for/in laravel now ported to (rcpp_framework)[https://github.com/Relintai/rcpp_framework].
+A simple experimental app that lets you save wordpress blogs using RCPP Framework.
 
-This is highly experimental stuff. It probably shouldn't be used by anyone who's sane.
-
-Note: this readme has been taken from an another project of mine, it will be updated later.
+This is discontinued, it's spinoff project is available here: https://github.com/Relintai/archivr
 
 ## Compilation
 
